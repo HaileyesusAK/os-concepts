@@ -1,5 +1,3 @@
-#include <sys/mman.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -24,30 +22,14 @@ int main(int argc, char* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	int fd;
-	struct timeval* start_time_ptr, end_time;
-	const char* shm_name = "/shm_starttime";
+	int pipefd[2];
 	size_t SIZE = sizeof (struct timeval);
 	pid_t pid;
 	int wstatus;
 
-	/* Open shared memory with read-and-write mode*/
-	fd = shm_open(shm_name, O_RDWR | O_CREAT, 0666);
-	if(fd < 0) {
-		perror("shm_open");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Limit the shared memory size to the size of struct timeval*/
-	if(ftruncate(fd, SIZE) < 0) {
-		perror("ftruncate");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Create a mapping to the file*/
-	start_time_ptr = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if(start_time_ptr == MAP_FAILED) {
-		perror("mmap");
+	/* Create the pipe */
+	if(pipe(pipefd) < 0) {
+		perror("pipe");
 		exit(EXIT_FAILURE);
 	}
 
@@ -55,27 +37,52 @@ int main(int argc, char* argv[]) {
 	pid = fork();
 	if(pid < 0) {
 		perror("fork");
-		shm_unlink(shm_name);
 		exit(EXIT_FAILURE);
 	}
 	else if(pid == 0) { /* child process */
-		gettimeofday(start_time_ptr, NULL);
+		/* close the read end of the pipe */
+		close(pipefd[0]);
+
+		struct timeval start_time;
+		gettimeofday(&start_time, NULL);
+
+		/* write the current time into the pipe */
+		if(write(pipefd[1], &start_time, sizeof (struct timeval)) < 0) {
+			perror("CHILD: write");
+			exit(EXIT_FAILURE);
+		}
+
+		/* close the write end of the pipe */
+		close(pipefd[1]);
+
+		/* execute the command */
 		if(execvp(argv[1], &argv[1]) < 0) {
 			exit(EXIT_FAILURE);
 		}
 	}
 	else { /* parent process */
+		/* close the write end of the pipe */
+		close(pipefd[1]);
+
 		wait(&wstatus);
 		if(wstatus) {
 			fprintf(stderr, "Unable to execute command: %s\n", argv[1]);
 			exit(EXIT_FAILURE);
 		}
 		else {
+			struct timeval start_time, end_time;
 			gettimeofday(&end_time, NULL);
-			printf("Elapsed time: %fs\n", get_elapsed_time(start_time_ptr, &end_time));
+
+			/* read the start time from the pipe */
+			if(read(pipefd[0], &start_time, sizeof (struct timeval)) < 0) {
+				perror("PARENT: write");
+				exit(EXIT_FAILURE);
+			}
+
+			close(pipefd[0]);
+			printf("Elapsed time: %fs\n", get_elapsed_time(&start_time, &end_time));
 		}
 	}
 
-	shm_unlink(shm_name);
 	exit(EXIT_SUCCESS);
 }
