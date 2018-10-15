@@ -39,7 +39,7 @@ size_t get_words(char line[], char * words[], size_t max_count);
 
 	Make sure both 'dst_args' and 'src_args' have at least 'argc' elements!
 */
-int copy_cmd(char *dst_args[], char *src_args[], size_t argc);
+int copy_cmd(char *dst_args[], char * const src_args[], size_t argc);
 
 /*
 	Prints the strings in cmd separated by whitespace to stdout,

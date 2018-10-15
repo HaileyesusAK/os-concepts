@@ -44,7 +44,7 @@ int free_cmd_buffer(char *args[], size_t argc) {
 	return 0;
 }
 
-int copy_cmd(char *dst_args[], const char *src_args[], size_t argc) {
+int copy_cmd(char *dst_args[], char * const src_args[], size_t argc) {
     if(!dst_args || !src_args)
         return -1;
 
