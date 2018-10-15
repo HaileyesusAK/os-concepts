@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "utils.h"
 
 size_t get_words(char line[], char * words[], size_t max_count) {
@@ -8,10 +9,20 @@ size_t get_words(char line[], char * words[], size_t max_count) {
 		return -1;
 
 	size_t i = 0;
-	char *s = strtok(line, " ");
-	while(s && (i < max_count)) {
-		words[i++] = s;
-		s = strtok(NULL, " ");
+	char *s = line;
+	char *e = s;
+	while(i < max_count && *s) {
+		while(isspace(*s))
+			++s;
+
+		if(*s) { /* If the string is not exhausted */
+			e = s;
+			while(isgraph(*e))
+				++e;
+
+			snprintf(words[i++], e - s + 1, "%s", s);
+			s = e;
+		}
 	}
 
 	return i;

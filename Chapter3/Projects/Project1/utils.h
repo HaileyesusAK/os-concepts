@@ -22,13 +22,12 @@ int free_cmd_buffer(char *args[], size_t argc);
 
 /*
 	Splits 'line' by whitespace into atmost 'max_count' 'words'.
-	'words' is an array of 'max_count' char pointers to the words
-	in 'line'.
+	'words' is an array of 'max_count' char pointers to which
+	the words are copied.
 
 	Return the number of words on success, or -1 on failure.
 
 	Make sure 'words' can hold at least 'max_count' elements!
-	NB: 'line' will be modified.
 */
 
 size_t get_words(char line[], char * words[], size_t max_count);
