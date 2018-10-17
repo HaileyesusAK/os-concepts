@@ -1,6 +1,6 @@
 
-#ifndef __OSH_H__
-#define __OSH_H__
+#ifndef __UTILS_H__
+#define __UTILS_H__
 
 /*
 	Allocates an array of 'argc' memory blocks, where each block is
@@ -48,5 +48,14 @@ int copy_cmd(char *dst_args[], char * const src_args[], size_t argc);
 
 */
 int print_cmd(char *const cmd[], size_t argc);
+
+/*
+	Executes a command that my possibly contain a pipe.
+	It assumes each command separated by a pipe doesn't
+	do input/output redirection and is executed in
+	foreground, i.e., doesn't contain '&'.
+
+	cmd is argc + 1 vector of char pointers where cmd[argc] is set to NULL */
+int execute_cmd(char* cmd[], size_t argc);
 
 #endif

@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <unistd.h>
+#include <errno.h>
 #include "utils.h"
+#include "osh.h"
 
 size_t get_words(char line[], char * words[], size_t max_count) {
 	if(!words)
@@ -74,4 +77,45 @@ int print_cmd(char * const cmd[], size_t argc) {
 
 	printf("\n");
 	return 0;
+}
+
+int execute_cmd(char* cmd[], size_t argc) {
+	size_t i = 0; /* the pipe character index in cmd */
+
+	while((i < argc - 1) && strcmp(cmd[i], "|"))
+		++i;
+
+	if(i > 0 && (i < argc - 1)) { /* If the pipe character is not either the first or last argument */
+		size_t cmd_cnt;
+		int pipefd[2];
+		if(pipe(pipefd) < 0)
+			return -1;
+
+		pid_t pid = fork();
+		if(pid < 0)
+			return -1;
+		else if(pid == 0) {
+			cmd_cnt = argc - i - 1;
+
+			close(pipefd[1]); /* close the write end */
+			dup2(pipefd[0], STDIN_FILENO);
+			return execute_cmd(&cmd[i+1], cmd_cnt);
+		}
+		else {
+			close(pipefd[0]);	/* close the read end */
+			dup2(pipefd[1], STDOUT_FILENO);
+			cmd[i] = NULL;
+			if(execvp(cmd[0], cmd) < 0) {
+				perror("Child:");
+				return -1;
+			}
+		}
+	}
+	else {
+		if(execvp(cmd[0], cmd) < 0) {
+			perror("Parent:");
+			print_cmd(cmd, argc);
+			return -1;
+		}
+	}
 }

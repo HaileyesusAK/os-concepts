@@ -6,9 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include "utils.h"
-
-#define MAX_CMD_LEN 80						/* The maximum length args */
-#define MAX_CMD_CNT (MAX_CMD_LEN/2)			/* The maximum number of commands */
+#include "osh.h"
 
 int main(void)
 {
@@ -72,7 +70,6 @@ int main(void)
 					/* Redirect input or output */
 					if(i > 0) {
 						int fd = -1;
-						printf("%s %s %s\n", args[i - 1], args[i], args[i+1]);
 						if(strcmp("<", args[i]) == 0) {
 							fd = open(args[i + 1], O_RDONLY);
 							if(fd < 0) {
@@ -97,7 +94,7 @@ int main(void)
 
 					args[i] = NULL;	/* terminate the command vector */
 
-					if(execvp(args[0], args) < 0) {
+					if(execute_cmd(args, i) < 0) {
 						fprintf(stderr, "%s: %s\n", args[0], strerror(errno));
 						return EXIT_FAILURE;
 					}
