@@ -7,7 +7,7 @@ INCLUDE =
 %.o: %.c %.h
 	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
-SRCS = osh.c utils.c
+SRCS = main.c osh.c 
 OBJS = $(patsubst %.c, %.o, $(filter %.c, $(SRCS)))
 
 build: $(OBJS)
