@@ -13,21 +13,14 @@
 	availability the partitions under it. Similarly, the availability
 	of the blocks are represented by a 64-bit unsigned integer.
 
-	This approach uniquely identifies upto 64^3 (262144) processes. 
+	This approach uniquely identifies upto 64^3 (262144) processes.
 */
 
 #include <stdint.h>
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#include "pid_manager.h"
 
-#define MIN_PID 300
-#define MAX_PID 5000
-#define WIDTH 64
-#define PROC_COUNT (MAX_PID - MIN_PID + 1)
+#include "pid_manager.h"
 
 #define SET_BIT(n, i) (n |= (1llu<<i))
 #define RESET_BIT(n, i) (n &= ~(1llu<<i))
@@ -57,10 +50,9 @@ static uint64_t* partitions;
 static uint64_t* partition_masks;
 static uint64_t blk_mask;
 static int blk_cnt;
-static int partition_cnt;
 
 int allocate_map(void) {
-	partition_cnt = (PROC_COUNT + WIDTH - 1) / WIDTH;
+	int partition_cnt = (PROC_COUNT + WIDTH - 1) / WIDTH;
 	partitions = (uint64_t *)calloc(partition_cnt, sizeof (uint64_t));
 	if(!partitions)
 		return -1;
@@ -112,54 +104,4 @@ void release_pid(int pid) {
 	    RESET_BIT(partition_masks[blk_id], partition_local_id);     // mark the partition as NOT exhausted
 		RESET_BIT(blk_mask, blk_id);	                            // mark the block as NOT exhausted
 	}
-}
-
-/* Test the API*/
-int main() {
-
-	int status = allocate_map();
-	assert(status == 0);
-
-	int allocated_ids[PROC_COUNT];
-	memset(allocated_ids, 0, PROC_COUNT * sizeof (int));
-
-	// verify the ids are allocated in the given range and are unique
-	for(int i = 0; i < PROC_COUNT; ++i) {
-		int pid = allocate_pid();
-		assert(pid >= MIN_PID && pid <= MAX_PID);
-		assert(allocated_ids[pid - MIN_PID] == 0);
-
-		// mark pid as allocated
-		allocated_ids[pid - MIN_PID] = 1;
-	}
-
-	// verify all the partitions are set properly
-	if(PROC_COUNT % WIDTH) { // When the last block is not exhausted
-		// All but the last partition must be exhausted
-		for(int i = 0; i < partition_cnt - 1; ++i) {
-			assert(IS_ALL_SET(partitions[i]));
-		}
-		assert(get_lsb_64(~partitions[partition_cnt-1]) == PROC_COUNT % WIDTH);
-	}
-	else {
-		// All the partitions must be exhausted
-		for(int i = 0; i < partition_cnt; ++i) {
-			assert(IS_ALL_SET(partitions[i]));
-		}
-	}
-
-	// release all the process ids
-	for(int pid = MIN_PID; pid <= MAX_PID; ++pid) {
-		release_pid(pid);
-	}
-
-	// verify all the partitions are reset
-	for(int i = 0; i < partition_cnt; ++i) {
-		assert(partitions[i] == 0);
-	}
-
-	// verify all the blocks are freed
-	assert(blk_mask == 0);
-
-	return 0;
 }
